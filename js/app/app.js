@@ -2,7 +2,13 @@
 $.jCanvas.defaults.fromCenter = false;
 $.jCanvas.defaults.layer = true;
 
-function Text(text, x, y, name) {
+var Text = function (text, x, y, name) {
+    this.xPos = x;
+    this.yPos = y;
+    this.text = text;
+    this.textName = name;
+}
+Text.prototype.write = function() {
     $("canvas").drawText({
         fillStyle: "black",
         strokeStyle: "black",
@@ -29,7 +35,6 @@ var Rect = function (xPos, yPos, wid, hei, name) {
     this.rectName = name
 }
 Rect.prototype.draw = function() {
-    var sss = this.xPos;
     $("canvas").drawRect({
           strokeStyle: "black",
           strokeWidth: 1,
@@ -38,16 +43,23 @@ Rect.prototype.draw = function() {
           width: this.w,
           height: this.h,
           draggable: true,
-          groups: ["categories"],
-          dragGroups: ["categories"],
+          groups: [this.rectName],
+          dragGroups: [this.rectName],
           //drag: onDrag,
           //dragstop: onDragStop,
           //dragcancel: onDragCancel,
-          name: this.rectName
+          name: this.rectName + "Layer"
       });
 };
 
-function Line(x1, y1, x2, y2, name) {
+var Line = function (x1, y1, x2, y2, name) {
+    this.x1 = x1;
+    this.y1 = y1;
+    this.x2 = x2;
+    this.y2 = y2;
+    this.lineName = name;
+}
+Line.prototype.draw = function() {
     $("canvas").drawLine({
         strokeStyle: "black",
         strokeWidth: 1,
