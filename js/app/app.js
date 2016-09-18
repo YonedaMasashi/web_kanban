@@ -2,6 +2,81 @@
 $.jCanvas.defaults.fromCenter = false;
 $.jCanvas.defaults.layer = true;
 
+var MouseUpDown = function() {
+    this.isPressed = false;
+    var fromX = 0;
+    var fromY = 0;
+    var index = 0;
+    var meObj = this;
+    function onMouseDown(e) {
+        console.log("onMouseDown");
+        drawOn(e.offsetX, e.offsetY);
+    }
+    function onMouseUp(e) {
+        drawOff(e.offsetX, e.offsetY);
+    }
+    function drawOn(x, y) {
+        // マウスが押された時の描画処理
+        //$('canvas').clearCanvas();
+        fromX = x;
+        fromY = y;
+    }
+    function drawOff(toX, toY) {
+        // デフォルトもしくはマウスが離れた時の描画処理
+        //$('canvas').clearCanvas(0,0,500,500);
+        var rect = new Rect(fromX, fromY, toX - fromX, toY - fromY, "rect" + index);
+        rect.draw(meObj);
+        ++index;
+    }
+
+    $('canvas').on('mousedown', onMouseDown);
+    $('canvas').on('mouseup', onMouseUp);
+}
+MouseUpDown.prototype.setPressed = function() {
+    this.isPressed = true;
+}
+MouseUpDown.prototype.setReleased = function() {
+    this.isPressed = false;
+}
+MouseUpDown.prototype.getPressed = function() {
+    return this.isPressed;
+}
+var m_up_down = new MouseUpDown();
+
+var Rect = function (xPos, yPos, wid, hei, name) {
+    this.xPos = xPos;
+    this.yPos = yPos;
+    this.w = wid;
+    this.h = hei;
+    this.rectName = name;
+}
+Rect.prototype.draw = function(m_up_down) {
+    if (m_up_down.getPressed() == true) {
+        m_up_down.setReleased();
+        return;
+    }
+    $("canvas").drawRect({
+          strokeStyle: "black",
+          strokeWidth: 1,
+          x: this.xPos,
+          y: this.yPos,
+          width: this.w,
+          height: this.h,
+          draggable: true,
+          groups: [this.rectName + "Layer"],
+          dragGroups: [this.rectName + "Layer"],
+          drag: function(layer) {
+              console.log("drag");
+              m_up_down.setPressed();
+          },
+          //drag: onDrag,
+          //dragstop: onDragStop,
+          //dragcancel: onDragCancel,
+          name: this.rectName
+      });
+};
+
+//////////////////////////////////////////////////////////////////////////
 var Text = function (text, x, y, name) {
     this.xPos = x;
     this.yPos = y;
@@ -19,38 +94,13 @@ Text.prototype.write = function() {
         fontFamily: "sans-serif",
         text: text,
         name: name + "-text",
-        groups: ["categories"],
-        dragGroups: ["categories"],
+        groups: [this.textName + "Layer"],
+        dragGroups: [this.textName + "Layer"],
         //drag: onDrag,
         //dragstop: onDragStop,
         //dragcancel: onDragCancel
     });
 }
-
-var Rect = function (xPos, yPos, wid, hei, name) {
-    this.xPos = xPos;
-    this.yPos = yPos;
-    this.w = wid;
-    this.h = hei;
-    this.rectName = name
-}
-Rect.prototype.draw = function() {
-    $("canvas").drawRect({
-          strokeStyle: "black",
-          strokeWidth: 1,
-          x: this.xPos,
-          y: this.yPos,
-          width: this.w,
-          height: this.h,
-          draggable: true,
-          groups: [this.rectName],
-          dragGroups: [this.rectName],
-          //drag: onDrag,
-          //dragstop: onDragStop,
-          //dragcancel: onDragCancel,
-          name: this.rectName + "Layer"
-      });
-};
 
 var Line = function (x1, y1, x2, y2, name) {
     this.x1 = x1;
@@ -68,8 +118,8 @@ Line.prototype.draw = function() {
         x2: x2,
         y2: y2,
         draggable: true,
-        groups: ["categories"],
-        dragGroups: ["categories"],
+        groups: [this.lineName + "Layer"],
+        dragGroups: [this.lineName + "Layer"],
         //drag: onDrag,
         //dragstop: onDragStop,
         //dragcancel: onDragCancel
@@ -89,47 +139,6 @@ for (var i = 0; i < textNames.length; i++) {
         borderWidth,
         $("canvas").getLayer(textNames[i] + "-text").width);
 }
-
-$("canvas").drawRect({
-  strokeStyle: "black",
-  strokeWidth: 1,
-  x: 45,
-  y: 45,
-  width: borderWidth + 10,
-  height: 75,
-  draggable: true,
-  groups: ["categories"],
-  dragGroups: ["categories"],
-  drag: onDrag,
-  dragstop: onDragStop,
-  dragcancel: onDragCancel,
-  name: "categories-border"
-});
-
-$("canvas").drawLine({
-    strokeStyle: "black",
-    strokeWidth: 1,
-    x1: 45,
-    y1: 70,
-    x2: 45 + borderWidth + 10,
-    y2: 70,
-    draggable: true,
-    groups: ["categories"],
-    dragGroups: ["categories"],
-    drag: onDrag,
-    dragstop: onDragStop,
-    dragcancel: onDragCancel
-});
-
-// 接続先の楕円
-$("canvas").drawEllipse({
-    fillStyle: 'black',
-    x: 250,
-    y: 100,
-    width: 20,
-    height: 20,
-    draggable: false
-});
 
 function drawLink() {
     var border = $("canvas").getLayer("categories-border");
@@ -157,33 +166,3 @@ function onDragCancel(layer) {
   // Do something...
 }
 */
-
-function m_up_down() {
-    var fromX = 0;
-    var fromY = 0;
-    var index = 0;
-    function onMouseDown(e) {
-        drawOn(e.offsetX, e.offsetY);
-    }
-    function onMouseUp(e) {
-        drawOff(e.offsetX, e.offsetY);
-    }
-    function drawOn(x, y) {
-        // マウスが押された時の描画処理
-        //$('canvas').clearCanvas();
-        fromX = x;
-        fromY = y;
-    }
-    function drawOff(toX, toY) {
-        // デフォルトもしくはマウスが離れた時の描画処理
-        //$('canvas').clearCanvas(0,0,500,500);
-        var rect = new Rect(fromX, fromY, toX - fromX, toY - fromY, "rect" + index);
-        rect.draw();
-        ++index;
-    }
-
-    $('canvas').on('mousedown', onMouseDown);
-    $('canvas').on('mouseup', onMouseUp);
-
-}
-m_up_down();
