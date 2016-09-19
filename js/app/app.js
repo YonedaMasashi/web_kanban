@@ -2,14 +2,14 @@
 $.jCanvas.defaults.fromCenter = false;
 $.jCanvas.defaults.layer = true;
 
+var indexRect = 0;
+
 var MouseUpDown = function() {
     this.isPressed = false;
     var fromX = 0;
     var fromY = 0;
-    var index = 0;
     var meObj = this;
     function onMouseDown(e) {
-        console.log("onMouseDown");
         drawOn(e.offsetX, e.offsetY);
     }
     function onMouseUp(e) {
@@ -24,9 +24,9 @@ var MouseUpDown = function() {
     function drawOff(toX, toY) {
         // デフォルトもしくはマウスが離れた時の描画処理
         //$('canvas').clearCanvas(0,0,500,500);
-        var rect = new Rect(fromX, fromY, toX - fromX, toY - fromY, "rect" + index);
+        var rect = new Rect(fromX, fromY, toX - fromX, toY - fromY, "rect" + indexRect);
         rect.draw(meObj);
-        ++index;
+        ++indexRect;
     }
 
     $('canvas').on('mousedown', onMouseDown);
@@ -49,11 +49,42 @@ var Rect = function (xPos, yPos, wid, hei, name) {
     this.w = wid;
     this.h = hei;
     this.rectName = name;
+    this.taskName = "";
 }
-Rect.prototype.draw = function(m_up_down) {
-    if (m_up_down.getPressed() == true) {
-        m_up_down.setReleased();
+Rect.prototype.draw = function(mouseUpDown) {
+    if (mouseUpDown.getPressed() == true) {
+        mouseUpDown.setReleased();
         return;
+    }
+    var showInputDialog = function(layerName) {
+        // ダイアログのメッセージを設定
+        $("#show_dialog").html('<p>' + "タスク情報入力"
+            + '</p><input type="text" name="inputtxt" id="inputtxt" '
+            + 'value="" />');
+        // ダイアログを作成
+        $("#show_dialog").dialog({
+            modal: true,
+            title: "タスク入力",
+            buttons: {
+                "OK": function() {
+                    $(this).dialog("close");
+                    var rect = $("canvas").getLayer(layerName);
+                    var taskName = $("#inputtxt").val();
+                    var cav = $("canvas");
+                    var textObj = $("canvas").getLayer(layerName + "Text");
+                    if (textObj) {
+                        textObj.text = taskName;
+                    } else {
+                        var textObj =
+                            new Text(taskName, rect.x + 5, rect.y + 5, layerName + "Text", layerName);
+                        textObj.write();
+                    }
+                },
+                "キャンセル": function() {
+                    $(this).dialog("close");
+                }
+            }
+        });
     }
     $("canvas").drawRect({
           strokeStyle: "black",
@@ -66,36 +97,39 @@ Rect.prototype.draw = function(m_up_down) {
           groups: [this.rectName + "Layer"],
           dragGroups: [this.rectName + "Layer"],
           drag: function(layer) {
-              console.log("drag");
-              m_up_down.setPressed();
+              mouseUpDown.setPressed();
           },
-          //drag: onDrag,
           //dragstop: onDragStop,
           //dragcancel: onDragCancel,
+          dblclick: function(layer) {
+              showInputDialog(layer.name);
+          },
           name: this.rectName
       });
 };
 
 //////////////////////////////////////////////////////////////////////////
-var Text = function (text, x, y, name) {
+var Text = function (text, x, y, name, layerName) {
     this.xPos = x;
     this.yPos = y;
-    this.text = text;
+    this.textStr = text;
     this.textName = name;
+    this.layerName = layerName;
 }
 Text.prototype.write = function() {
     $("canvas").drawText({
         fillStyle: "black",
         strokeStyle: "black",
         strokeWidth: "0.5",
-        x: x,
-        y: y,
+        x: this.xPos,
+        y: this.yPos,
         fontSize: 14,
         fontFamily: "sans-serif",
-        text: text,
-        name: name + "-text",
-        groups: [this.textName + "Layer"],
-        dragGroups: [this.textName + "Layer"],
+        text: this.textStr,
+        name: this.textName,
+        draggable: true,
+        groups: [this.layerName + "Layer"],
+        dragGroups: [this.layerName + "Layer"],
         //drag: onDrag,
         //dragstop: onDragStop,
         //dragcancel: onDragCancel
