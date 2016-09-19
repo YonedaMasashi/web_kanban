@@ -4,8 +4,11 @@ $.jCanvas.defaults.layer = true;
 
 var indexRect = 0;
 
+//////////////////////////////////////////////////////////////////////////
+// MouseUpDown Object
+//////////////////////////////////////////////////////////////////////////
 var MouseUpDown = function() {
-    this.isPressed = false;
+    this.mousePressed = false;
     var fromX = 0;
     var fromY = 0;
     var meObj = this;
@@ -17,32 +20,32 @@ var MouseUpDown = function() {
     }
     function drawOn(x, y) {
         // マウスが押された時の描画処理
-        //$('canvas').clearCanvas();
         fromX = x;
         fromY = y;
     }
     function drawOff(toX, toY) {
         // デフォルトもしくはマウスが離れた時の描画処理
-        //$('canvas').clearCanvas(0,0,500,500);
         var rect = new Rect(fromX, fromY, toX - fromX, toY - fromY, "rect" + indexRect);
         rect.draw(meObj);
         ++indexRect;
     }
-
     $('canvas').on('mousedown', onMouseDown);
     $('canvas').on('mouseup', onMouseUp);
 }
 MouseUpDown.prototype.setPressed = function() {
-    this.isPressed = true;
+    this.mousePressed = true;
 }
 MouseUpDown.prototype.setReleased = function() {
-    this.isPressed = false;
+    this.mousePressed = false;
 }
-MouseUpDown.prototype.getPressed = function() {
-    return this.isPressed;
+MouseUpDown.prototype.isPressed = function() {
+    return this.mousePressed;
 }
 var m_up_down = new MouseUpDown();
 
+//////////////////////////////////////////////////////////////////////////
+// Rect Object
+//////////////////////////////////////////////////////////////////////////
 var Rect = function (xPos, yPos, wid, hei, name) {
     this.xPos = xPos;
     this.yPos = yPos;
@@ -52,39 +55,9 @@ var Rect = function (xPos, yPos, wid, hei, name) {
     this.taskName = "";
 }
 Rect.prototype.draw = function(mouseUpDown) {
-    if (mouseUpDown.getPressed() == true) {
+    if (mouseUpDown.isPressed() == true) {
         mouseUpDown.setReleased();
         return;
-    }
-    var showInputDialog = function(layerName) {
-        // ダイアログのメッセージを設定
-        $("#show_dialog").html('<p>' + "タスク情報入力"
-            + '</p><input type="text" name="inputtxt" id="inputtxt" '
-            + 'value="" />');
-        // ダイアログを作成
-        $("#show_dialog").dialog({
-            modal: true,
-            title: "タスク入力",
-            buttons: {
-                "OK": function() {
-                    $(this).dialog("close");
-                    var rect = $("canvas").getLayer(layerName);
-                    var taskName = $("#inputtxt").val();
-                    var cav = $("canvas");
-                    var textObj = $("canvas").getLayer(layerName + "Text");
-                    if (textObj) {
-                        textObj.text = taskName;
-                    } else {
-                        var textObj =
-                            new Text(taskName, rect.x + 5, rect.y + 5, layerName + "Text", layerName);
-                        textObj.write();
-                    }
-                },
-                "キャンセル": function() {
-                    $(this).dialog("close");
-                }
-            }
-        });
     }
     $("canvas").drawRect({
           strokeStyle: "black",
@@ -93,21 +66,22 @@ Rect.prototype.draw = function(mouseUpDown) {
           y: this.yPos,
           width: this.w,
           height: this.h,
+          align: 'left',
           draggable: true,
           groups: [this.rectName + "Layer"],
           dragGroups: [this.rectName + "Layer"],
           drag: function(layer) {
               mouseUpDown.setPressed();
           },
-          //dragstop: onDragStop,
-          //dragcancel: onDragCancel,
           dblclick: function(layer) {
-              showInputDialog(layer.name);
+              showInputDialog(layer.name, mouseUpDown);
           },
           name: this.rectName
       });
 };
 
+//////////////////////////////////////////////////////////////////////////
+// Text Object
 //////////////////////////////////////////////////////////////////////////
 var Text = function (text, x, y, name, layerName) {
     this.xPos = x;
@@ -115,24 +89,28 @@ var Text = function (text, x, y, name, layerName) {
     this.textStr = text;
     this.textName = name;
     this.layerName = layerName;
+    this.fontSize = 14;
 }
-Text.prototype.write = function() {
+Text.prototype.write = function(mouseUpDown) {
     $("canvas").drawText({
         fillStyle: "black",
         strokeStyle: "black",
         strokeWidth: "0.5",
         x: this.xPos,
         y: this.yPos,
-        fontSize: 14,
+        fontSize: this.fontSize,
         fontFamily: "sans-serif",
         text: this.textStr,
         name: this.textName,
         draggable: true,
         groups: [this.layerName + "Layer"],
         dragGroups: [this.layerName + "Layer"],
-        //drag: onDrag,
-        //dragstop: onDragStop,
-        //dragcancel: onDragCancel
+        drag: function(layer) {
+            mouseUpDown.setPressed();
+        },
+        dblclick: function(layer) {
+            showInputDialog(layer.name, mouseUpDown);
+        },
     });
 }
 
@@ -153,10 +131,62 @@ Line.prototype.draw = function() {
         y2: y2,
         draggable: true,
         groups: [this.lineName + "Layer"],
-        dragGroups: [this.lineName + "Layer"],
-        //drag: onDrag,
-        //dragstop: onDragStop,
-        //dragcancel: onDragCancel
+        dragGroups: [this.lineName + "Layer"]
+    });
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+// Dialog
+//////////////////////////////////////////////////////////////////////////
+function showInputDialog(layerName, mouseUpDown) {
+    // ダイアログのメッセージを設定
+    $("#show_dialog").html('<p>' + "タスク情報入力"
+        + '</p><textarea cols="30" rows="3" name="inputtxt" id="inputtxt" '
+        + 'value="" />');
+    // ダイアログを作成
+    $("#show_dialog").dialog({
+        modal: true,
+        title: "タスク入力",
+        buttons: {
+            "OK": function() {
+                $(this).dialog("close");
+                var taskName = $("#inputtxt").val();
+
+                var splitLine = taskName.match(/\n/g);
+                var lineNum = 0;
+                if (splitLine) {
+                    lineNum = splitLine.length + 1;
+                } else {
+                    lineNum = 1;
+                }
+
+                var strWidth = 0;
+                var arrayOfStrings = taskName.split("\n");
+                for (var i = 0; i < arrayOfStrings.length; i++) {
+                    strWidth = Math.max(arrayOfStrings[i].length, strWidth);
+                }
+                layerName = layerName.replace(/Text/g, "");
+                var rect = $("canvas").getLayer(layerName);
+                var textObj = $("canvas").getLayer(layerName + "Text");
+                var fontSize = 0;
+                if (textObj) {
+                    textObj.text = taskName;
+                    fontSize = Number(textObj.fontSize.replace(/px/g, ""));
+                } else {
+                    var textObj =
+                        new Text(taskName, rect.x + 5, rect.y + 5, layerName + "Text", layerName);
+                    textObj.write(mouseUpDown);
+                    fontSize = textObj.fontSize;
+                }
+
+                rect.width = Math.max(rect.width, strWidth * fontSize);
+                rect.height = Math.max(rect.height, lineNum * fontSize);
+            },
+            "キャンセル": function() {
+                $(this).dialog("close");
+            }
+        }
     });
 }
 
