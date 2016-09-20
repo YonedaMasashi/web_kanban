@@ -54,6 +54,29 @@ var Rect = function (xPos, yPos, wid, hei, name) {
     this.rectName = name;
     this.taskName = "";
 }
+function drawCorner(xC, yC, name) {
+    var size = 6;
+    var layerName = name.replace(/(TL|TR|LL|LR)/g, "");
+    $("canvas").drawRect({
+        strokeStyle: "black",
+        strokeWidth: 0.5,
+        x: xC - (size/2),
+        y: yC - (size/2),
+        width: size,
+        height: size,
+        align: 'left',
+        draggable: true,
+        name: name,
+        groups: [layerName + "Layer"],
+        dragGroups: [layerName + "Layer"]
+    });
+}
+function clearCorner(name) {
+    $("canvas").removeLayer(name + "TL");
+    $("canvas").removeLayer(name + "TR");
+    $("canvas").removeLayer(name + "LL");
+    $("canvas").removeLayer(name + "LR");
+}
 Rect.prototype.draw = function(mouseUpDown) {
     if (mouseUpDown.isPressed() == true) {
         mouseUpDown.setReleased();
@@ -75,6 +98,12 @@ Rect.prototype.draw = function(mouseUpDown) {
           },
           dblclick: function(layer) {
               showInputDialog(layer.name, mouseUpDown);
+          },
+          click: function(layer) {
+              drawCorner(layer.x              , layer.y               , layer.name + "TL");
+              drawCorner(layer.x + layer.width, layer.y               , layer.name + "TR");
+              drawCorner(layer.x              , layer.y + layer.height, layer.name + "LL");
+              drawCorner(layer.x + layer.width, layer.y + layer.height, layer.name + "LR");
           },
           name: this.rectName
       });
@@ -114,6 +143,9 @@ Text.prototype.write = function(mouseUpDown) {
     });
 }
 
+//////////////////////////////////////////////////////////////////////////
+// Line Object
+//////////////////////////////////////////////////////////////////////////
 var Line = function (x1, y1, x2, y2, name) {
     this.x1 = x1;
     this.y1 = y1;
@@ -135,15 +167,16 @@ Line.prototype.draw = function() {
     });
 }
 
-
 //////////////////////////////////////////////////////////////////////////
 // Dialog
 //////////////////////////////////////////////////////////////////////////
 function showInputDialog(layerName, mouseUpDown) {
     // ダイアログのメッセージを設定
-    $("#show_dialog").html('<p>' + "タスク情報入力"
+    $("#show_dialog").html(
+          '<p>' + "タスク情報入力"
         + '</p><textarea cols="30" rows="3" name="inputtxt" id="inputtxt" '
-        + 'value="" />');
+        + 'value="" />'
+    );
     // ダイアログを作成
     $("#show_dialog").dialog({
         modal: true,
