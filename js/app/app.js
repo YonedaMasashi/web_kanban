@@ -101,7 +101,6 @@ function drawCornerEdge(xC, yC, name, mouseUpDown) {
                 newY = rect.y;
             } else if (/LR/.test(name) == true) {
                 place = "LR";
-                //OK
                 var xBaseEdge = rect.x + rect.width;
                 var yBaseEdge = rect.y + rect.height;
                 newWidth = rect.width + (layer.x + (size/2) - xBaseEdge);
@@ -308,44 +307,3 @@ function showInputDialog(layerName, mouseUpDown) {
         }
     });
 }
-
-
-/*
-var textNames = ["categories", "categories-category_id", "categories-name"];
-drawText("categories", 50, 50, textNames[0]);
-drawText("category_id", 50, 80, textNames[1]);
-drawText("name", 50, 100, textNames[2]);
-
-var borderWidth = 0;
-for (var i = 0; i < textNames.length; i++) {
-    borderWidth = Math.max(
-        borderWidth,
-        $("canvas").getLayer(textNames[i] + "-text").width);
-}
-
-function drawLink() {
-    var border = $("canvas").getLayer("categories-border");
-    $("canvas").drawLine({
-        strokeStyle: "black",
-        strokeWidth: 1,
-        x1: border.x + border.width,
-        y1: border.y + 50,
-        x2: 260,
-        y2: 110,
-        draggable: false,
-        name: "link"
-    });
-}
-drawLink();
-
-function onDrag(layer) {
-  $("canvas").removeLayer("link");
-  drawLink();
-}
-function onDragStop(layer) {
-  // Do something...
-}
-function onDragCancel(layer) {
-  // Do something...
-}
-*/
