@@ -52,82 +52,89 @@ var m_up_down = new MouseUpDown();
 //////////////////////////////////////////////////////////////////////////
 // Edge Object
 //////////////////////////////////////////////////////////////////////////
-function drawCornerEdge(xC, yC, name, mouseUpDown) {
-    var size = 6;
-    $("canvas").drawRect({
-        strokeStyle: "black",
-        strokeWidth: 0.5,
-        x: xC - (size/2),
-        y: yC - (size/2),
-        width: size,
-        height: size,
-        align: 'left',
-        draggable: true,
-        name: name,
-        groups: [name + "Layer"],
-        dragGroups: [name + "Layer"],
-        drag: function(layer) {
-            console.log(layer.name + ": corner drag");
-            var layerName = name.replace(/(TL|TR|LL|LR)/g, "");
-            var rect = $("canvas").getLayer(layerName);
-            var place = "";
-            var newWidth = 0;
-            var newHeight = 0;
-            var newX = 0;
-            var newY = 0;
-            if (/TL/.test(name) == true) {
-                place = "TL";
-                var xBaseEdge = rect.x;
-                var yBaseEdge = rect.y;
-                newWidth = rect.width - (layer.x + (size/2) - xBaseEdge);
-                newHeight = rect.height - (layer.y + (size/2) - yBaseEdge);
-                newX = layer.x + (size/2);
-                newY = layer.y + (size/2);
-            } else if (/TR/.test(name) == true) {
-                place = "TR";
-                var xBaseEdge = rect.x + rect.width;
-                var yBaseEdge = rect.y;
-                newWidth = rect.width + (layer.x + (size/2) - xBaseEdge);
-                newHeight = rect.height - (layer.y + (size/2) - yBaseEdge);
-                newX = rect.x;
-                newY = layer.y + (size/2);
-            } else if (/LL/.test(name) == true) {
-                place = "LL";
-                var xBaseEdge = rect.x;
-                var yBaseEdge = rect.y + rect.height;
-                newWidth = rect.width - (layer.x + (size/2) - xBaseEdge);
-                newHeight = rect.height + (layer.y + (size/2) - yBaseEdge);
-                newX = layer.x + (size/2);
-                newY = rect.y;
-            } else if (/LR/.test(name) == true) {
-                place = "LR";
-                var xBaseEdge = rect.x + rect.width;
-                var yBaseEdge = rect.y + rect.height;
-                newWidth = rect.width + (layer.x + (size/2) - xBaseEdge);
-                newHeight = rect.height + (layer.y + (size/2) - yBaseEdge);
-                newX = rect.x;
-                newY = rect.y;
-            }
-            if (newWidth > 10) {
-                rect.width = newWidth;
-                rect.x = newX;
-            }
-            if (newHeight > 10) {
-                rect.height = newHeight;
-                rect.y = newY;
-            }
-            clearCorner(layerName, place);
-            drawCorner(rect.x, rect.y, rect.width, rect.height, layerName, mouseUpDown, place);
-            mouseUpDown.setPressed();
-        },
-    });
-}
 function drawCorner(x, y, width, height, name, mouseUpDown, exclusion) {
     if (exclusion != "TL") drawCornerEdge(x        , y         , name + "TL", mouseUpDown);
     if (exclusion != "TR") drawCornerEdge(x + width, y         , name + "TR", mouseUpDown);
     if (exclusion != "LL") drawCornerEdge(x        , y + height, name + "LL", mouseUpDown);
     if (exclusion != "LR") drawCornerEdge(x + width, y + height, name + "LR", mouseUpDown);
+
+    function drawCornerEdge(xC, yC, name, mouseUpDown) {
+        var size = 6;
+        $("canvas").drawRect({
+            strokeStyle: "black",
+            strokeWidth: 0.5,
+            x: xC - (size/2),
+            y: yC - (size/2),
+            width: size,
+            height: size,
+            align: 'left',
+            draggable: true,
+            name: name,
+            groups: [name + "Layer"],
+            dragGroups: [name + "Layer"],
+            drag: function(layer) {
+                console.log(layer.name + ": corner drag");
+                var layerName = name.replace(/(TL|TR|LL|LR)/g, "");
+                var rect = $("canvas").getLayer(layerName);
+                var place = getPlace(name);
+                var [newX, newWidth] = getXWidth(place, rect, layer, size);
+                var [newY, newHeight] = getYHeight(place, rect, layer, size);
+                if (newWidth > 20) {
+                    rect.width = newWidth;
+                    rect.x = newX;
+                }
+                if (newHeight > 20) {
+                    rect.height = newHeight;
+                    rect.y = newY;
+                }
+                clearCorner(layerName, place);
+                drawCorner(rect.x, rect.y, rect.width, rect.height, layerName, mouseUpDown, place);
+                mouseUpDown.setPressed();
+            },
+        });
+
+        function getPlace(name) {
+            if (/TL/.test(name) == true) {
+                return "TL";
+            } else if(/TR/.test(name) == true) {
+                return "TR";
+            } else if(/LL/.test(name) == true) {
+                return "LL";
+            } else {
+                return "LR";
+            }
+        }
+        function getXWidth(place, rect, layer, size) {
+            var newWidth = 0;
+            var newX = 0;
+            if (place.charAt(1) === "L") {
+                var xBaseEdge = rect.x;
+                newWidth = rect.width - (layer.x + (size/2) - xBaseEdge);
+                newX = layer.x + (size/2);
+            } else {
+                var xBaseEdge = rect.x + rect.width;
+                newWidth = rect.width + (layer.x + (size/2) - xBaseEdge);
+                newX = rect.x;
+            }
+            return [newX, newWidth];
+        }
+        function getYHeight(place, rect, layer, size) {
+            var newHeight = 0;
+            var newY = 0;
+            if (place.charAt(0) === "T") {
+                var yBaseEdge = rect.y;
+                newHeight = rect.height - (layer.y + (size/2) - yBaseEdge);
+                newY = layer.y + (size/2);
+            } else {
+                var yBaseEdge = rect.y + rect.height;
+                newHeight = rect.height + (layer.y + (size/2) - yBaseEdge);
+                newY = rect.y;
+            }
+            return [newY, newHeight];
+        }
+    }
 }
+
 function clearCorner(name, exclusion) {
     if (exclusion != "TL") $("canvas").removeLayer(name + "TL");
     if (exclusion != "TR") $("canvas").removeLayer(name + "TR");
@@ -206,6 +213,8 @@ var Text = function (text, x, y, name, layerName) {
     this.fontSize = 14;
 }
 Text.prototype.write = function(mouseUpDown) {
+    var isInit = true;
+    var isClicked = false;
     $("canvas").drawText({
         fillStyle: "black",
         strokeStyle: "black",
@@ -225,6 +234,22 @@ Text.prototype.write = function(mouseUpDown) {
         dblclick: function(layer) {
             showInputDialog(layer.name, mouseUpDown);
         },
+        click: function(layer) {
+            console.log(layer.name + ": click");
+            if (isInit == true) {
+                isInit = false;
+                return;
+            }
+            var rectName = layer.name.replace(/Text/g, "");
+            var rect = $("canvas").getLayer(rectName);
+            if (isClicked == true) {
+                clearCorner(rectName);
+                isClicked = false;
+                return;
+            }
+            drawCorner(rect.x, rect.y, rect.width, rect.height, rectName, mouseUpDown);
+            isClicked = true;
+        }
     });
 }
 
