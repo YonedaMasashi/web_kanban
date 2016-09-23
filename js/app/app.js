@@ -13,9 +13,11 @@ var MouseUpDown = function() {
     var fromY = 0;
     var meObj = this;
     function onMouseDown(e) {
+        console.log("onMouseDown")
         drawOn(e.offsetX, e.offsetY);
     }
     function onMouseUp(e) {
+        console.log("onMouseUp")
         drawOff(e.offsetX, e.offsetY);
     }
     function drawOn(x, y) {
@@ -25,9 +27,13 @@ var MouseUpDown = function() {
     }
     function drawOff(toX, toY) {
         // デフォルトもしくはマウスが離れた時の描画処理
+        if (Math.abs(toX - fromX) < 10 || Math.abs(toY - fromY) < 10 ) {
+            return;
+        }
         var rect = new Rect(fromX, fromY, toX - fromX, toY - fromY, "rect" + indexRect);
-        rect.draw(meObj);
-        ++indexRect;
+        if (rect.draw(meObj) == true) {
+            ++indexRect;
+        }
     }
     $('canvas').on('mousedown', onMouseDown);
     $('canvas').on('mouseup', onMouseUp);
@@ -44,19 +50,10 @@ MouseUpDown.prototype.isPressed = function() {
 var m_up_down = new MouseUpDown();
 
 //////////////////////////////////////////////////////////////////////////
-// Rect Object
+// Edge Object
 //////////////////////////////////////////////////////////////////////////
-var Rect = function (xPos, yPos, wid, hei, name) {
-    this.xPos = xPos;
-    this.yPos = yPos;
-    this.w = wid;
-    this.h = hei;
-    this.rectName = name;
-    this.taskName = "";
-}
-function drawCorner(xC, yC, name) {
+function drawCornerEdge(xC, yC, name, mouseUpDown) {
     var size = 6;
-    var layerName = name.replace(/(TL|TR|LL|LR)/g, "");
     $("canvas").drawRect({
         strokeStyle: "black",
         strokeWidth: 0.5,
@@ -67,21 +64,95 @@ function drawCorner(xC, yC, name) {
         align: 'left',
         draggable: true,
         name: name,
-        groups: [layerName + "Layer"],
-        dragGroups: [layerName + "Layer"]
+        groups: [name + "Layer"],
+        dragGroups: [name + "Layer"],
+        drag: function(layer) {
+            console.log(layer.name + ": corner drag");
+            var layerName = name.replace(/(TL|TR|LL|LR)/g, "");
+            var rect = $("canvas").getLayer(layerName);
+            var place = "";
+            var newWidth = 0;
+            var newHeight = 0;
+            var newX = 0;
+            var newY = 0;
+            if (/TL/.test(name) == true) {
+                place = "TL";
+                var xBaseEdge = rect.x;
+                var yBaseEdge = rect.y;
+                newWidth = rect.width - (layer.x + (size/2) - xBaseEdge);
+                newHeight = rect.height - (layer.y + (size/2) - yBaseEdge);
+                newX = layer.x + (size/2);
+                newY = layer.y + (size/2);
+            } else if (/TR/.test(name) == true) {
+                place = "TR";
+                var xBaseEdge = rect.x + rect.width;
+                var yBaseEdge = rect.y;
+                newWidth = rect.width + (layer.x + (size/2) - xBaseEdge);
+                newHeight = rect.height - (layer.y + (size/2) - yBaseEdge);
+                newX = rect.x;
+                newY = layer.y + (size/2);
+            } else if (/LL/.test(name) == true) {
+                place = "LL";
+                var xBaseEdge = rect.x;
+                var yBaseEdge = rect.y + rect.height;
+                newWidth = rect.width - (layer.x + (size/2) - xBaseEdge);
+                newHeight = rect.height + (layer.y + (size/2) - yBaseEdge);
+                newX = layer.x + (size/2);
+                newY = rect.y;
+            } else if (/LR/.test(name) == true) {
+                place = "LR";
+                //OK
+                var xBaseEdge = rect.x + rect.width;
+                var yBaseEdge = rect.y + rect.height;
+                newWidth = rect.width + (layer.x + (size/2) - xBaseEdge);
+                newHeight = rect.height + (layer.y + (size/2) - yBaseEdge);
+                newX = rect.x;
+                newY = rect.y;
+            }
+            if (newWidth > 10) {
+                rect.width = newWidth;
+                rect.x = newX;
+            }
+            if (newHeight > 10) {
+                rect.height = newHeight;
+                rect.y = newY;
+            }
+            clearCorner(layerName, place);
+            drawCorner(rect.x, rect.y, rect.width, rect.height, layerName, mouseUpDown, place);
+            mouseUpDown.setPressed();
+        },
     });
 }
-function clearCorner(name) {
-    $("canvas").removeLayer(name + "TL");
-    $("canvas").removeLayer(name + "TR");
-    $("canvas").removeLayer(name + "LL");
-    $("canvas").removeLayer(name + "LR");
+function drawCorner(x, y, width, height, name, mouseUpDown, exclusion) {
+    if (exclusion != "TL") drawCornerEdge(x        , y         , name + "TL", mouseUpDown);
+    if (exclusion != "TR") drawCornerEdge(x + width, y         , name + "TR", mouseUpDown);
+    if (exclusion != "LL") drawCornerEdge(x        , y + height, name + "LL", mouseUpDown);
+    if (exclusion != "LR") drawCornerEdge(x + width, y + height, name + "LR", mouseUpDown);
+}
+function clearCorner(name, exclusion) {
+    if (exclusion != "TL") $("canvas").removeLayer(name + "TL");
+    if (exclusion != "TR") $("canvas").removeLayer(name + "TR");
+    if (exclusion != "LL") $("canvas").removeLayer(name + "LL");
+    if (exclusion != "LR") $("canvas").removeLayer(name + "LR");
+}
+//////////////////////////////////////////////////////////////////////////
+// Rect Object
+//////////////////////////////////////////////////////////////////////////
+var Rect = function (xPos, yPos, wid, hei, name) {
+    this.xPos = xPos;
+    this.yPos = yPos;
+    this.w = wid;
+    this.h = hei;
+    this.rectName = name;
+    this.taskName = "";
 }
 Rect.prototype.draw = function(mouseUpDown) {
     if (mouseUpDown.isPressed() == true) {
         mouseUpDown.setReleased();
-        return;
+        return false;
     }
+    var isInit = true;
+    var isClicked = false;
     $("canvas").drawRect({
           strokeStyle: "black",
           strokeWidth: 1,
@@ -94,19 +165,34 @@ Rect.prototype.draw = function(mouseUpDown) {
           groups: [this.rectName + "Layer"],
           dragGroups: [this.rectName + "Layer"],
           drag: function(layer) {
+              console.log(layer.name + ": drag");
               mouseUpDown.setPressed();
+              if (isClicked == true) {
+                  clearCorner(layer.name);
+                  isClicked = false;
+              }
           },
           dblclick: function(layer) {
+              console.log(layer.name + ": dblclick");
               showInputDialog(layer.name, mouseUpDown);
           },
           click: function(layer) {
-              drawCorner(layer.x              , layer.y               , layer.name + "TL");
-              drawCorner(layer.x + layer.width, layer.y               , layer.name + "TR");
-              drawCorner(layer.x              , layer.y + layer.height, layer.name + "LL");
-              drawCorner(layer.x + layer.width, layer.y + layer.height, layer.name + "LR");
+              console.log(layer.name + ": click");
+              if (isInit == true) {
+                  isInit = false;
+                  return;
+              }
+              if (isClicked == true) {
+                  clearCorner(layer.name);
+                  isClicked = false;
+                  return;
+              }
+              drawCorner(layer.x, layer.y, layer.width, layer.height, layer.name, mouseUpDown);
+              isClicked = true;
           },
           name: this.rectName
       });
+      return true;
 };
 
 //////////////////////////////////////////////////////////////////////////
